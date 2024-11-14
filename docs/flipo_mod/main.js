@@ -1,11 +1,9 @@
+// main.js
 title = "FLIP O Mod";
-
 description = `
 [Tap] Flip
 `;
-
 characters = [];
-
 options = {
   theme: "shapeDark",
   isPlayingBgm: true,
@@ -13,11 +11,10 @@ options = {
   isDrawingScoreFront: true,
   seed: 2,
 };
-
 /** @type {{pos: Vector, pp: Vector, vel: Vector, angle: number, multiplier: 1}[]} */
 let balls;
 let flipCount;
-/** @type {{pos: Vector, hasBall: boolean}[]} */
+/** @type {{pos: Vector, hasBall: boolean, isYellow: boolean}[]} */
 let blocks;
 let nextBlockDist;
 const ballRadius = 2;
@@ -25,6 +22,7 @@ const flipperLength = 12;
 const blockSize = vec(9, 5);
 const blockCount = 8;
 let freezeTime = 0; // timer to stop block falling
+const yellowBlockProbability = 0.1; 
 
 function update() {
   if (!ticks) {
@@ -43,7 +41,13 @@ function update() {
   }
   let maxBlockY = 0;
   blocks.forEach((b) => {
-    color(b.hasBall ? "red" : "cyan");
+    if (b.isYellow) { 
+      color("yellow");
+    } else if (b.hasBall) {
+      color("red");
+    } else {
+      color("cyan");
+    }
     box(b.pos, blockSize);
     if (b.pos.y > maxBlockY) {
       maxBlockY = b.pos.y;
@@ -69,9 +73,11 @@ function update() {
   color("light_blue");
   rect(0, 0, 5, 99);
   rect(95, 0, 5, 99);
+
   color("blue");
   let c = bar(7, 75, 25, 3, 0.5, 0).isColliding.rect;
   c = { ...c, ...bar(101 - 7, 75, 25, 3, PI - 0.5, 0).isColliding.rect };
+
   color("purple");
   const f1a = flipCount === 0 ? 0.5 : -0.5;
   c = { ...c, ...bar(50 - 17, 88, flipperLength, 3, f1a, 0).isColliding.rect };
@@ -103,19 +109,19 @@ function update() {
     color("black");
     const c = arc(b.pos, ballRadius, 3, b.angle, b.angle + PI * 2).isColliding
       .rect;
-    if (c.red || c.cyan) {
-      if (c.red) {
-        freezeTime = 5 * 60; // stop falling for 5 seconds when a red block is hit
+    if (c.red || c.cyan || c.yellow) { 
+      if (c.yellow) { 
+        freezeTime = 5 * 60; // stop falling for 5 seconds when a yellow block is hit
       }
       addScore(b.multiplier * balls.length, b.pos);
       b.multiplier++;
       color("transparent");
       const cx = arc(b.pp.x, b.pos.y, ballRadius).isColliding.rect;
       const cy = arc(b.pos.x, b.pp.y, ballRadius).isColliding.rect;
-      if (!(cx.red || cx.cyan)) {
+      if (!(cx.red || cx.cyan || cx.yellow)) { 
         reflect(b, b.vel.x > 0 ? -PI : 0);
       }
-      if (!(cy.red || cy.cyan)) {
+      if (!(cy.red || cy.cyan || cy.yellow)) { 
         reflect(b, b.vel.y > 0 ? -PI / 2 : PI / 2);
       }
     }
@@ -130,7 +136,7 @@ function update() {
     if (c.blue) {
       reflect(b, b.pos.x < 50 ? 0.5 - PI / 2 : PI - 0.5 + PI / 2, "blue");
     }
-    if (c.purple) {
+    if (c.purple) { 
       if (input.isJustPressed) {
         play("jump");
         const pp = vec(b.pos);
@@ -150,12 +156,10 @@ function update() {
       return true;
     }
   });
-
   if (balls.length === 0) {
     play("explosion");
     end();
   }
-
   balls.forEach((b) => {
     balls.forEach((ab) => {
       if (ab === b || ab.pos.distanceTo(b.pos) > ballRadius * 2) {
@@ -168,33 +172,35 @@ function update() {
   color("transparent");
   remove(blocks, (b) => {
     b.pos.y += scr;
-    if (box(b.pos, blockSize).isColliding.rect.black) {
+    const blockCollision = box(b.pos, blockSize).isColliding.rect;
+    if (blockCollision.black) {
       if (b.hasBall) {
         play("powerUp");
         balls.push({
           pos: vec(b.pos),
           pp: vec(b.pos),
-          vel: vec(1, 0).rotate(PI * 2),
+          vel: vec(1, 0).rotate(rnd(PI * 2)),
           angle: rnd(PI * 2),
           multiplier: 1,
         });
+      } else if (blockCollision.yellow) { 
+        play("hit");
+        freezeTime = 5 * 60; 
       } else {
         play("coin");
       }
       return true;
     }
   });
-
   nextBlockDist -= scr;
   while (nextBlockDist < 0) {
     let x = (blockSize.x + 1) / 2;
     const y = -nextBlockDist;
     const br = 0.1 / balls.length;
     for (let i = 0; i < blockCount / 2; i++) {
-      if (rnd() < 0.5) {
-        blocks.push({ pos: vec(50 - x, y), hasBall: rnd() < br });
-        blocks.push({ pos: vec(50 + x, y), hasBall: rnd() < br });
-      }
+      const isYellowBlock = rnd() < yellowBlockProbability; 
+      blocks.push({ pos: vec(50 - x, y), hasBall: rnd() < br, isYellow: isYellowBlock }); 
+      blocks.push({ pos: vec(50 + x, y), hasBall: rnd() < br, isYellow: isYellowBlock }); 
       x += blockSize.x + 1;
     }
     nextBlockDist += blockSize.y + 1;
@@ -216,3 +222,4 @@ function update() {
     }
   }
 }
+
