@@ -1,6 +1,8 @@
 // main.js
 title = "FLIP O Mod";
 description = `
+Red: +1 ball\n
+Yellow: stop +5s\n
 [Tap] Flip
 `;
 characters = [];
