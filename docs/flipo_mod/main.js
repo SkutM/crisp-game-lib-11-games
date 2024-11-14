@@ -22,7 +22,7 @@ const flipperLength = 12;
 const blockSize = vec(9, 5);
 const blockCount = 8;
 let freezeTime = 0; // timer to stop block falling
-const yellowBlockProbability = 0.1; 
+const yellowBlockProbability = 0.1;
 
 function update() {
   if (!ticks) {
@@ -41,7 +41,7 @@ function update() {
   }
   let maxBlockY = 0;
   blocks.forEach((b) => {
-    if (b.isYellow) { 
+    if (b.isYellow) {
       color("yellow");
     } else if (b.hasBall) {
       color("red");
@@ -64,7 +64,9 @@ function update() {
 
   if (input.isJustPressed) {
     play("laser");
-    scr += sqrt(difficulty) * 0.3 * balls.length;
+    if (freezeTime <= 0) { // ensure input does not move blocks during freeze
+      scr += sqrt(difficulty) * 0.3 * balls.length;
+    }
     flipCount = (flipCount + 1) % 2;
   }
 
@@ -109,8 +111,8 @@ function update() {
     color("black");
     const c = arc(b.pos, ballRadius, 3, b.angle, b.angle + PI * 2).isColliding
       .rect;
-    if (c.red || c.cyan || c.yellow) { 
-      if (c.yellow) { 
+    if (c.red || c.cyan || c.yellow) {
+      if (c.yellow) {
         freezeTime = 5 * 60; // stop falling for 5 seconds when a yellow block is hit
       }
       addScore(b.multiplier * balls.length, b.pos);
@@ -118,10 +120,10 @@ function update() {
       color("transparent");
       const cx = arc(b.pp.x, b.pos.y, ballRadius).isColliding.rect;
       const cy = arc(b.pos.x, b.pp.y, ballRadius).isColliding.rect;
-      if (!(cx.red || cx.cyan || cx.yellow)) { 
+      if (!(cx.red || cx.cyan || cx.yellow)) {
         reflect(b, b.vel.x > 0 ? -PI : 0);
       }
-      if (!(cy.red || cy.cyan || cy.yellow)) { 
+      if (!(cy.red || cy.cyan || cy.yellow)) {
         reflect(b, b.vel.y > 0 ? -PI / 2 : PI / 2);
       }
     }
@@ -136,7 +138,7 @@ function update() {
     if (c.blue) {
       reflect(b, b.pos.x < 50 ? 0.5 - PI / 2 : PI - 0.5 + PI / 2, "blue");
     }
-    if (c.purple) { 
+    if (c.purple) {
       if (input.isJustPressed) {
         play("jump");
         const pp = vec(b.pos);
@@ -183,9 +185,9 @@ function update() {
           angle: rnd(PI * 2),
           multiplier: 1,
         });
-      } else if (blockCollision.yellow) { 
+      } else if (blockCollision.yellow) {
         play("hit");
-        freezeTime = 5 * 60; 
+        freezeTime = 5 * 60;
       } else {
         play("coin");
       }
@@ -198,9 +200,9 @@ function update() {
     const y = -nextBlockDist;
     const br = 0.1 / balls.length;
     for (let i = 0; i < blockCount / 2; i++) {
-      const isYellowBlock = rnd() < yellowBlockProbability; 
-      blocks.push({ pos: vec(50 - x, y), hasBall: rnd() < br, isYellow: isYellowBlock }); 
-      blocks.push({ pos: vec(50 + x, y), hasBall: rnd() < br, isYellow: isYellowBlock }); 
+      const isYellowBlock = rnd() < yellowBlockProbability;
+      blocks.push({ pos: vec(50 - x, y), hasBall: rnd() < br, isYellow: isYellowBlock });
+      blocks.push({ pos: vec(50 + x, y), hasBall: rnd() < br, isYellow: isYellowBlock });
       x += blockSize.x + 1;
     }
     nextBlockDist += blockSize.y + 1;
@@ -222,4 +224,3 @@ function update() {
     }
   }
 }
-
