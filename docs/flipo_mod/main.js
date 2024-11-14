@@ -3,6 +3,7 @@ title = "FLIP O Mod";
 description = `
 Red: +1 ball\n
 Yellow: stop +5s\n
+Green: explode\n
 [Tap] Flip
 `;
 characters = [];
@@ -16,7 +17,7 @@ options = {
 /** @type {{pos: Vector, pp: Vector, vel: Vector, angle: number, multiplier: 1}[]} */
 let balls;
 let flipCount;
-/** @type {{pos: Vector, hasBall: boolean, isYellow: boolean}[]} */
+/** @type {{pos: Vector, hasBall: boolean, isYellow: boolean, isGreen: boolean}[]} */
 let blocks;
 let nextBlockDist;
 const ballRadius = 2;
@@ -25,6 +26,7 @@ const blockSize = vec(9, 5);
 const blockCount = 8;
 let freezeTime = 0; // timer to stop block falling
 const yellowBlockProbability = 0.1;
+const greenBlockProbability = 0.1;
 
 function update() {
   if (!ticks) {
@@ -43,7 +45,9 @@ function update() {
   }
   let maxBlockY = 0;
   blocks.forEach((b) => {
-    if (b.isYellow) {
+    if (b.isGreen) {  
+      color("green");
+    } else if (b.isYellow) {
       color("yellow");
     } else if (b.hasBall) {
       color("red");
@@ -113,19 +117,22 @@ function update() {
     color("black");
     const c = arc(b.pos, ballRadius, 3, b.angle, b.angle + PI * 2).isColliding
       .rect;
-    if (c.red || c.cyan || c.yellow) {
+    if (c.red || c.cyan || c.yellow || c.green) { 
       if (c.yellow) {
         freezeTime = 5 * 60; // stop falling for 5 seconds when a yellow block is hit
+      }
+      if (c.green) {
+        explodeBlock(b.pos); // destroy adjacent blocks
       }
       addScore(b.multiplier * balls.length, b.pos);
       b.multiplier++;
       color("transparent");
       const cx = arc(b.pp.x, b.pos.y, ballRadius).isColliding.rect;
       const cy = arc(b.pos.x, b.pp.y, ballRadius).isColliding.rect;
-      if (!(cx.red || cx.cyan || cx.yellow)) {
+      if (!(cx.red || cx.cyan || cx.yellow || cx.green)) {
         reflect(b, b.vel.x > 0 ? -PI : 0);
       }
-      if (!(cy.red || cy.cyan || cy.yellow)) {
+      if (!(cy.red || cy.cyan || cy.yellow || cy.green)) {
         reflect(b, b.vel.y > 0 ? -PI / 2 : PI / 2);
       }
     }
@@ -202,10 +209,10 @@ function update() {
     const y = -nextBlockDist;
     const br = 0.1 / balls.length;
     for (let i = 0; i < blockCount / 2; i++) {
-      const isYellowBlock = rnd() < yellowBlockProbability;
-      blocks.push({ pos: vec(50 - x, y), hasBall: rnd() < br, isYellow: isYellowBlock });
-      blocks.push({ pos: vec(50 + x, y), hasBall: rnd() < br, isYellow: isYellowBlock });
-      x += blockSize.x + 1;
+      const isGreenBlock = rnd() < greenBlockProbability; // New green block
+      blocks.push({ pos: vec(50 - x, y), hasBall: rnd() < br, isYellow: rnd() < yellowBlockProbability, isGreen: isGreenBlock });
+      blocks.push({ pos: vec(50 + x, y), hasBall: rnd() < br, isYellow: rnd() < yellowBlockProbability, isGreen: isGreenBlock });
+      x += (blockSize.x + 1);
     }
     nextBlockDist += blockSize.y + 1;
   }
@@ -224,5 +231,16 @@ function update() {
         }
       }
     }
+  }
+
+  function explodeBlock(pos) { // green blocks exploding
+    const toRemove = [];
+    blocks.forEach((b) => {
+      if (b.pos.distanceTo(pos) <= blockSize.x + 10) { // range adj for debugging
+        toRemove.push(b);
+      }
+    });
+    toRemove.forEach((b) => play("explosion"));
+    blocks = blocks.filter((b) => !toRemove.includes(b));
   }
 }
