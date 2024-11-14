@@ -1,4 +1,4 @@
-title = "FLIP O";
+title = "FLIP O Mod";
 
 description = `
 [Tap] Flip
@@ -24,6 +24,7 @@ const ballRadius = 2;
 const flipperLength = 12;
 const blockSize = vec(9, 5);
 const blockCount = 8;
+let freezeTime = 0; // timer to stop block falling
 
 function update() {
   if (!ticks) {
@@ -48,12 +49,21 @@ function update() {
       maxBlockY = b.pos.y;
     }
   });
-  let scr = maxBlockY < 29 ? (30 - maxBlockY) * 0.1 : sqrt(difficulty) * 0.02;
+
+  // calculate scroll speed based on freezeTime
+  let scr = 0;
+  if (freezeTime <= 0) {
+    scr = maxBlockY < 29 ? (30 - maxBlockY) * 0.1 : sqrt(difficulty) * 0.02;
+  } else {
+    freezeTime -= 1; // decrement freezeTime if blocks are frozen
+  }
+
   if (input.isJustPressed) {
     play("laser");
     scr += sqrt(difficulty) * 0.3 * balls.length;
     flipCount = (flipCount + 1) % 2;
   }
+
   color("light_cyan");
   rect(5, 0, 90, 5);
   color("light_blue");
@@ -81,6 +91,7 @@ function update() {
       bar(50 - 17, 88, flipperLength, 3, 0, 0);
     }
   }
+
   remove(balls, (b) => {
     b.pp.set(b.pos);
     b.pp.y += scr;
@@ -93,6 +104,9 @@ function update() {
     const c = arc(b.pos, ballRadius, 3, b.angle, b.angle + PI * 2).isColliding
       .rect;
     if (c.red || c.cyan) {
+      if (c.red) {
+        freezeTime = 5 * 60; // stop falling for 5 seconds when a red block is hit
+      }
       addScore(b.multiplier * balls.length, b.pos);
       b.multiplier++;
       color("transparent");
@@ -136,10 +150,12 @@ function update() {
       return true;
     }
   });
+
   if (balls.length === 0) {
     play("explosion");
     end();
   }
+
   balls.forEach((b) => {
     balls.forEach((ab) => {
       if (ab === b || ab.pos.distanceTo(b.pos) > ballRadius * 2) {
@@ -148,6 +164,7 @@ function update() {
       reflect(b, ab.pos.angleTo(b.pos));
     });
   });
+
   color("transparent");
   remove(blocks, (b) => {
     b.pos.y += scr;
@@ -167,6 +184,7 @@ function update() {
       return true;
     }
   });
+
   nextBlockDist -= scr;
   while (nextBlockDist < 0) {
     let x = (blockSize.x + 1) / 2;
