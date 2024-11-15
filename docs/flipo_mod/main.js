@@ -2,8 +2,8 @@
 title = "FLIP O Mod";
 description = `
 Red: +1 ball\n
-Yellow: stop +5s\n
-Green: explode\n
+Yellow: stop +3s\n
+Green: boom\n
 [Tap] Flip
 `;
 characters = [];
@@ -25,8 +25,8 @@ const flipperLength = 12;
 const blockSize = vec(9, 5);
 const blockCount = 8;
 let freezeTime = 0; // timer to stop block falling
-const yellowBlockProbability = 0.1;
-const greenBlockProbability = 0.1;
+const yellowBlockProbability = 0.05;
+const greenBlockProbability = 0.05;
 
 function update() {
   if (!ticks) {
@@ -119,7 +119,7 @@ function update() {
       .rect;
     if (c.red || c.cyan || c.yellow || c.green) { 
       if (c.yellow) {
-        freezeTime = 5 * 60; // stop falling for 5 seconds when a yellow block is hit
+        freezeTime = 3 * 60; 
       }
       if (c.green) {
         explodeBlock(b.pos); // destroy adjacent blocks
@@ -209,7 +209,7 @@ function update() {
     const y = -nextBlockDist;
     const br = 0.1 / balls.length;
     for (let i = 0; i < blockCount / 2; i++) {
-      const isGreenBlock = rnd() < greenBlockProbability; // New green block
+      const isGreenBlock = rnd() < greenBlockProbability;
       blocks.push({ pos: vec(50 - x, y), hasBall: rnd() < br, isYellow: rnd() < yellowBlockProbability, isGreen: isGreenBlock });
       blocks.push({ pos: vec(50 + x, y), hasBall: rnd() < br, isYellow: rnd() < yellowBlockProbability, isGreen: isGreenBlock });
       x += (blockSize.x + 1);
@@ -236,11 +236,28 @@ function update() {
   function explodeBlock(pos) { // green blocks exploding
     const toRemove = [];
     blocks.forEach((b) => {
-      if (b.pos.distanceTo(pos) <= blockSize.x + 10) { // range adj for debugging
+      if (b.pos.distanceTo(pos) <= blockSize.x + 7.5) { // range adjusted
+        play("explosion");
         toRemove.push(b);
+        // award score and apply power-ups if necessary
+        addScore(1, b.pos); // Score from each block
+        if (b.hasBall) {
+          // duplication effect from red blocks
+          balls.push({
+            pos: vec(b.pos),
+            pp: vec(b.pos),
+            vel: vec(1, 0).rotate(rnd(PI * 2)),
+            angle: rnd(PI * 2),
+            multiplier: 1,
+          });
+          play("powerUp");
+        } else if (b.isYellow) {
+          // time freeze effect from yellow blocks
+          freezeTime = 5 * 60;
+          play("hit");
+        }
       }
     });
-    toRemove.forEach((b) => play("explosion"));
     blocks = blocks.filter((b) => !toRemove.includes(b));
   }
 }
