@@ -28,6 +28,12 @@ let freezeTime = 0; // timer to stop block falling
 const yellowBlockProbability = 0.05;
 const greenBlockProbability = 0.05;
 
+// new variables for thresholds
+let blockSpeedMultiplier = 1;
+let rotationEnabled = false;
+const scoreThresholds = [100, 200];
+let nextThresholdIndex = 0;
+
 function update() {
   if (!ticks) {
     balls = [
@@ -43,6 +49,16 @@ function update() {
     blocks = [];
     nextBlockDist = 0;
   }
+
+  if (nextThresholdIndex < scoreThresholds.length && score >= scoreThresholds[nextThresholdIndex]) {
+    if (nextThresholdIndex === 0) {
+      blockSpeedMultiplier = 1.5;
+    } else if (nextThresholdIndex === 1) {
+      rotationEnabled = true;
+    }
+    nextThresholdIndex++;
+  }
+
   let maxBlockY = 0;
   blocks.forEach((b) => {
     if (b.isGreen) {  
@@ -54,7 +70,12 @@ function update() {
     } else {
       color("cyan");
     }
-    box(b.pos, blockSize);
+    if (rotationEnabled) {
+      b.angle = (b.angle || 0) + 0.05;
+      box(b.pos, blockSize, b.angle);
+    } else {
+      box(b.pos, blockSize);
+    }
     if (b.pos.y > maxBlockY) {
       maxBlockY = b.pos.y;
     }
@@ -63,7 +84,7 @@ function update() {
   // calculate scroll speed based on freezeTime
   let scr = 0;
   if (freezeTime <= 0) {
-    scr = maxBlockY < 29 ? (30 - maxBlockY) * 0.1 : sqrt(difficulty) * 0.02;
+    scr = (maxBlockY < 29 ? (30 - maxBlockY) * 0.1 : sqrt(difficulty) * 0.02) * blockSpeedMultiplier;
   } else {
     freezeTime -= 1; // decrement freezeTime if blocks are frozen
   }
